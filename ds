@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+# ds - Show used, free, and total disk space for all real drives
+# Works on macOS and Linux
+
+#  Colours $
+BOLD="\033[1m"
+RESET="\033[0m"
+CYAN="\033[36m"
+GREEN="\033[32m"
+YELLOW="\033[33m"
+RED="\033[31m"
+BLUE="\033[34m"
+DIM="\033[2m"
+
+BAR_WIDTH=30
+
+#  Progress bar 
+make_bar() {
+    local pct=$1
+    local filled=$(( pct * BAR_WIDTH / 100 ))
+    local empty=$(( BAR_WIDTH - filled ))
+    local color
+    (( pct >= 90 )) && color=$RED || { (( pct >= 70 )) && color=$YELLOW || color=$GREEN; }
+    printf "${color}["
+    for (( i=0; i<filled; i++ )); do printf ''; done
+    printf "${DIM}"
+    for (( i=0; i<empty;  i++ )); do printf ''; done
+    printf "${RESET}${color}]${RESET}"
+}
+
+#  Human-readable bytes 
+human() {
+    local b=$1
+    if   (( b >= 1099511627776 )); then awk "BEGIN{printf \"%.1f TB\", $b/1099511627776}"
+    elif (( b >= 1073741824    )); then awk "BEGIN{printf \"%.1f GB\", $b/1073741824}"
+    elif (( b >= 1048576       )); then awk "BEGIN{printf \"%.1f MB\", $b/1048576}"
+    else printf "%d KB" "$(( b / 1024 ))"
+    fi
+}
+
+#  Header / footer 
+SEP() { printf "${DIM}  "; for (( i=0; i<98; i++ )); do printf ''; done; printf "${RESET}\n"; }
+
+print_header() {
+    echo
+    printf "${BOLD}${CYAN}    Disk Space Report${RESET}\n"
+    printf "${DIM}  %-36s %10s %10s %10s   %-*s %s${RESET}\n" \
+        "Mount" "Total" "Used" "Free" "$BAR_WIDTH" "Usage" "Used%"
+    SEP
+}
+
+print_footer() {
+    SEP
+    printf "  ${DIM}%d drive(s) found  ·  %s${RESET}\n\n" \
+        "$1" "$(date '+%Y-%m-%d %H:%M:%S')"
+}
+
+#  One row 
+print_row() {
+    local label=$1 total_b=$2 free_b=$3
+    local used_b=$(( total_b - free_b ))
+    (( total_b == 0 )) && return
+    local pct=$(( used_b * 100 / total_b ))
+    local color
+    (( pct >= 90 )) && color=$RED || { (( pct >= 70 )) && color=$YELLOW || color=$BLUE; }
+    printf "  ${color}${BOLD}%-36s${RESET} %10s %10s %10s   %s ${BOLD}%3d%%${RESET}\n" \
+        "$label" \
+        "$(human $total_b)" "$(human $used_b)" "$(human $free_b)" \
+        "$(make_bar $pct)" "$pct"
+}
+
+#  Collect drives 
+# -P  POSIX format (consistent column layout on both macOS and Linux)
+# -k  1 KB blocks
+# We then keep only rows whose filesystem starts with /dev/
+# (covers real disks on both platforms; skips tmpfs, devfs, etc.)
+
+print_header
+count=0
+while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    fs=$(    awk '{print $1}' <<< "$line")
+    total_k=$(awk '{print $2}' <<< "$line")
+    free_k=$(  awk '{print $4}' <<< "$line")
+    mount=$(   awk '{print $6}' <<< "$line")
+
+    # Skip noise
+    [[ "$fs"    == *loop* || "$fs" == *snap* ]] && continue
+    [[ "$mount" == /boot* || "$mount" == /snap* ]] && continue
+
+    print_row "$mount" "$(( total_k * 1024 ))" "$(( free_k * 1024 ))"
+    (( count++ ))
+done < <(df -Pk | awk 'NR>1 && $1~/^\/dev\// && $6 !~ "^/System/Volumes/" {print}')
+
+print_footer "$count"
+
+
