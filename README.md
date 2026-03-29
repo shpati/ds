@@ -4,7 +4,7 @@ A clean, colourful terminal tool that shows used, free, and total space for ever
 
 ```
   💾  Disk Space Report
-  Mount                           Total       Used       Free   Usage                          Used%
+  Mount                           Total       Used       Free   Usage                           Used%
   ──────────────────────────────────────────────────────────────────────────────────────────────────────
   /                            926.4 GB   905.8 GB    20.6 GB   [█████████████████████████████░]  97%
   /Volumes/PSSD                  1.9 TB     1.9 TB     8.3 GB   [█████████████████████████████░]  99%

@@ -45,7 +45,7 @@ print_header() {
     echo
     printf "${BOLD}${CYAN}    Disk Space Report${RESET}\n"
     printf "${DIM}  %-36s %10s %10s %10s   %-*s %s${RESET}\n" \
-        "Mount" "Total" "Used" "Free" "$BAR_WIDTH" "Usage" "Used%"
+        "Mount" "Total" "Used" "Free" "$BAR_WIDTH" "Usage" " Used%"
     SEP
 }
 
